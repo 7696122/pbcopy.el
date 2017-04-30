@@ -52,8 +52,11 @@ This is in addition to, but in preference to, the primary selection.")
 See `x-set-selection'."
   (when pbcopy-program
     (let* ((process-connection-type nil)
-           (proc (start-process "pbcopy" nil "pbcopy"
-                                "-selection" (symbol-name type))))
+           (proc (if (executable-find "reattach-to-user-namespace")
+                     (start-process "pbcopy" nil "reattach-to-user-namespace" "pbcopy"
+                                    "-selection" (symbol-name type))
+                   (start-process "pbcopy" nil "pbcopy"
+                                  "-selection" (symbol-name type)))))
       (process-send-string proc data)
       (process-send-eof proc))))
 
@@ -70,7 +73,9 @@ See `x-set-selection'."
   (when pbcopy-program
     (let (clip-text primary-text)
       (when pbcopy-select-enable-clipboard
-        (setq clip-text (shell-command-to-string "pbpaste"))
+        (setq clip-text (if (executable-find "reattach-to-user-namespace")
+                            (shell-command-to-string "reattach-to-user-namespace pbpaste")
+                          (shell-command-to-string "pbpaste")))
         (setq clip-text
               (cond ;; check clipboard selection
                ((or (not clip-text) (string= clip-text ""))
@@ -82,7 +87,9 @@ See `x-set-selection'."
                 (setq pbcopy-last-selected-text-clipboard clip-text)
                 nil)
                (t (setq pbcopy-last-selected-text-clipboard clip-text)))))
-      (setq primary-text (shell-command-to-string "pbpaste"))
+      (setq primary-text (if (executable-find "reattach-to-user-namespace")
+                             (shell-command-to-string "reattach-to-user-namespace pbpaste")
+                           (shell-command-to-string "pbpaste")))
       (setq primary-text
             (cond ;; check primary selection
              ((or (not primary-text) (string= primary-text ""))
